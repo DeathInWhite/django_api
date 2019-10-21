@@ -1,0 +1,214 @@
+django-admin startproject api_example
+cd api_example
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py startapp languages
+
+/***SETTINGS.PY***/
+*En installed_apps
+'rest_framework',
+'languages'
+
+/****En URLS.PY de la principal****/
+from ...... path,include
+path('',include('languages.urls'))
+
+/****En URLS.PY de Languages****/
+from django.urls import path,include
+from . import views
+from rest_framework import routers
+
+router = routers.DefaultRouter()
+router.register('languages',views.LanguageView)
+
+urlpatterns = [
+    path('',include(router.urls))
+]
+
+
+/****en el Model.py de languages****/
+from django.db import models
+
+class Language(models.Model):
+    name = models.CharField(max_length=50)
+    paradign=models.CharField(max_length=50)
+
+/***cmd***/
+python manage.py makemigration
+python manage.py migrate
+
+/*Languages/admin.py*/
+from django.contrib import admin
+from .models import Language
+
+admin.site.register(Language)
+
+/***Crear un serializer en Lenguajes***/
+from rest_framework import serializers
+from .models import Language
+
+class LanguageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Language
+        fields = ('id','name','paradign')
+
+/***views.py***/
+from django.shortcuts import render
+from rest_framework import viewsets
+from .models import Language
+from .serializer import LanguageSerializer
+
+class LanguageView(viewsets.ModelViewSet):
+    queryset = Language.objects.all()
+    serializer_class = LanguageSerializer
+
+*************************************************************************************
+
+/***Models.py***/
+class Language(models.Model):
+    name = models.CharField(max_length=50)
+    paradign=models.ForeignKey(Paradign,on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.name
+
+class Programer(models.Model):
+    name = models.CharField(max_length=50)
+    language = models.ManyToManyField(Language)
+
+    def __str__(self):
+        return self.name
+
+/***cmd***/
+python manage.py makemigrations
+python manage.py migrate
+
+/***Serializer.py***/
+from rest_framework import serializers
+from .models import Language,Paradign,Programer
+
+
+class LanguageSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Language
+        fields = ('id','url','name','paradign')
+
+class ParadignSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Paradign
+        fields = ('id','url','name')
+
+class ParadignSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Programer
+        fields = ('id','url','name','language')
+
+/***views.py***/
+from django.shortcuts import render
+from rest_framework import viewsets
+from .models import Language,Paradign, Programer
+from .serializer import LanguageSerializer,ParadignSerializer,ProgramerSerializer
+
+class LanguageView(viewsets.ModelViewSet):
+    queryset = Language.objects.all()
+    serializer_class = LanguageSerializer
+
+class ParadignView(viewsets.ModelViewSet):
+    queryset = Paradign.objects.all()
+    serializer_class = ParadignSerializer
+
+class ProgramerView(viewsets.ModelViewSet):
+    queryset = Programer.objects.all()
+    serializer_class = ProgramerSerializer
+
+
+/***url.py***/
+from django.urls import path,include
+from . import views
+from rest_framework import routers
+
+router = routers.DefaultRouter()
+router.register('languages',views.LanguageView)
+router.register('parading',views.ParadignView)
+router.register('programer',views.ProgramerView)
+
+urlpatterns = [
+    path('',include(router.urls))
+]
+
+***********************************************************************
+/***views.py***/
+
+//ESTE SE PUEDE HACER ACA, QUE ES EN LA AUTENTICACION O EN EL SETTINGS QUE ES MAS ABAJO
+//de esta manera es mas simple por uno por uno
+
+...
+from rest_framework import viewsets,permissions
+....
+
+class LanguageView(viewsets.ModelViewSet):
+    queryset = Language.objects.all()
+    serializer_class = LanguageSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)#se muestra en caso de autenticacion
+
+class ParadignView(viewsets.ModelViewSet):
+    queryset = Paradign.objects.all()
+    serializer_class = ParadignSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)#se muestra en caso de autenticacion
+
+class ProgramerView(viewsets.ModelViewSet):
+    queryset = Programer.objects.all()
+    serializer_class = ProgramerSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)#se muestra en caso de autenticacion
+
+/***Setting.PY***/
+
+//de esta manera es global, mas la dejaria asi, si nosotros solamente usuariamos la api
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES':('rest_framework.permissions.IsAuthenticated',)
+}
+
+**************************************************************************
+
+//Vamos a instalar https://github.com/davesque/django-rest-framework-simplejwt para la autenticacion de tokens
+
+/***Settings.py***/
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES':('rest_framework.permissions.IsAuthenticated',),
+    'DEFAULT_AUTHENTICATION_CLASSES':('rest_framework_simplejwt.authentication.JWTAuthentication',)
+}
+
+/***URLS***/
+from django.contrib import admin
+from django.urls import path,include
+from rest_framework_simplejwt.views import TokenObtainPairView,TokenRefreshView
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('',include('languages.urls')),
+    path('api-auth/',include('rest_framework.urls')),
+    path('api/token',TokenObtainPairView.as_view()),
+    path('api/token/refresh',TokenRefreshView.as_view())
+]
+
+/***Probar en el post man las rutas que creamos para hacer requests***/
+
+/***CMD***/
+pip install requests
+
+/***Carpeta del proyecto***/
+
+//se crea send.py
+import requests
+
+headers = {}
+headers['Authorization'] = 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNTcxNjcyNjkxLCJqdGkiOiJhMDRiNDg4MzM1NDE0YTIxOTIzNjA3YzkzMjhhMzg1MSIsInVzZXJfaWQiOjF9.6z8Ktjf0BMxMG0Z4jF_1bt_Nz1oTlOG0lgDtR8FmxuQ'
+
+r = requests.get('http://localhost:8000/parading/',headers=headers)
+
+print(r.text)
+
+
+
+
